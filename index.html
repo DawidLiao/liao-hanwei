@@ -1000,8 +1000,15 @@
 
   function showWrongHostNotice(){
     var host = "";
-    try { host = location.host || location.protocol; } catch (e) { host = ""; }
-    noticeHostEl.textContent = host || "本地文件";
+    try {
+      host = location.host || "";
+      if (!host){
+        host = (location.protocol || "").indexOf("file") === 0 ? "本地文件" : (location.protocol || "未知地址");
+      }
+    } catch (e) {
+      host = "未知地址";
+    }
+    noticeHostEl.textContent = host;
     noticeLinkEl.href = CONFIG.endpoint + "#feedback";
     noticeEl.className = "fb-notice show";
   }

@@ -1,0 +1,8 @@
+# WorkBuddy 工作区数据（本地记忆、应用跟踪文件）
+.workbuddy/
+.wbapp_*.genie
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini

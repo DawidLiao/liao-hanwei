@@ -1125,7 +1125,7 @@
     try {
       var sec = document.getElementById("feedback");
       if (sec) sec.className += " fb-remote";
-      document.getElementById("fbEmbedFrame").src = CONFIG.endpoint + "/?embed=1";
+      document.getElementById("fbEmbedFrame").src = CONFIG.endpoint + "/?embed=1#feedback";
       document.getElementById("fbEmbed").className = "fb-embed show";
     } catch (e) {}
   }

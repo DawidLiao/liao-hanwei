@@ -317,6 +317,28 @@
   .fb-notice-head{font-size:14px; letter-spacing:.12em; color:#e59a88; margin-bottom:9px}
   .fb-notice-text{margin:0 0 15px; font-size:13.5px; line-height:1.9; color:var(--muted)}
   .fb-notice-text b{color:var(--gold-soft); font-weight:500; letter-spacing:.04em}
+  .fb-notice-actions{display:flex; gap:12px; flex-wrap:wrap; align-items:center}
+  .fb-embed{display:none; margin:0 0 26px}
+  .fb-embed.show{display:block}
+  .fb-embed iframe{
+    display:block; width:100%; height:980px; border:1px solid var(--line);
+    border-radius:8px; background:var(--bg);
+  }
+  .fb-embed-note{margin-top:10px; font-size:12px; letter-spacing:.06em; color:var(--muted); text-align:right}
+  section.fb-remote .fb-grid{display:none}
+
+  /* 内嵌模式：被镜像站（如 GitHub Pages）以 iframe 嵌入时，只保留留言区 */
+  html.embed-mode #stars,
+  html.embed-mode .nav,
+  html.embed-mode .hero,
+  html.embed-mode #about,
+  html.embed-mode #loves,
+  html.embed-mode #vision,
+  html.embed-mode #journey,
+  html.embed-mode #works,
+  html.embed-mode #contact,
+  html.embed-mode footer{display:none !important}
+  html.embed-mode #feedback{padding:34px 0 40px !important}
   .fb-card{
     border:1px solid var(--line); border-radius:8px; padding:36px 34px;
     background:linear-gradient(165deg, rgba(201,168,106,.065), rgba(255,255,255,.012));
@@ -463,6 +485,16 @@
 <body>
 
 <canvas id="stars" aria-hidden="true"></canvas>
+
+<script>
+  /* 内嵌模式：被镜像站（如 GitHub Pages）以 iframe 嵌入时，只保留留言区，
+     留言请求由 iframe 内的正式地址发起，来源匹配，可以正常提交。 */
+  try {
+    if (/(^|[?&])embed=1(&|$)/.test(location.search || "")){
+      document.documentElement.className += " embed-mode";
+    }
+  } catch (e) {}
+</script>
 
 <!-- 导航 -->
 <header class="nav" id="nav">
@@ -757,12 +789,19 @@
       </div>
 
       <div class="fb-notice" id="fbNotice">
-        <div class="fb-notice-head">这 条 地 址 收 不 到 留 言</div>
+        <div class="fb-notice-head">这 条 地 址 自 己 收 不 到 留 言</div>
         <p class="fb-notice-text">
           留言存在云服务里，服务端只接受来自正式地址的提交。你现在打开的是 <b id="fbNoticeHost">当前地址</b>，
-          在这里点「送出」不会成功，也没有别的地方可以绕过。
+          所以本页的表单已经收起来了。不过下面内嵌了正式地址的留言入口 —— 在那里写，一样能送到我这里。
         </p>
-        <a class="btn btn-ghost" id="fbNoticeLink" href="#feedback">去 正 式 地 址 留 言</a>
+        <div class="fb-notice-actions">
+          <a class="btn btn-ghost" id="fbNoticeLink" href="#feedback">换 到 正 式 地 址 留 言</a>
+        </div>
+      </div>
+
+      <div class="fb-embed" id="fbEmbed">
+        <iframe id="fbEmbedFrame" title="留言入口（内嵌自正式地址）" loading="lazy"></iframe>
+        <div class="fb-embed-note">上面就是正式地址的留言区。若它一直空白，说明该平台禁止了嵌入 —— 请点「换到正式地址留言」。</div>
       </div>
 
       <div class="fb-grid">
@@ -1081,6 +1120,16 @@
     });
   }
 
+  function enterRemoteMode(){
+    showWrongHostNotice();
+    try {
+      var sec = document.getElementById("feedback");
+      if (sec) sec.className += " fb-remote";
+      document.getElementById("fbEmbedFrame").src = CONFIG.endpoint + "/?embed=1";
+      document.getElementById("fbEmbed").className = "fb-embed show";
+    } catch (e) {}
+  }
+
   function wallFail(){
     wallList.innerHTML = "";
     wallCount.textContent = "";
@@ -1091,7 +1140,7 @@
     if (!ON_CLOUD_HOST){
       wallList.innerHTML = "";
       wallCount.textContent = "";
-      wallList.appendChild(emptyBox("留言墙要连上云服务才读得到。当前不是正式地址，所以这里读不出来 —— 正式地址上可以正常查看和提交。"));
+      wallList.appendChild(emptyBox("留言墙要连上云服务才读得到。当前不是正式地址，本页读不出来 —— 内嵌的留言区里可以看到正常版。"));
       return;
     }
     var c = getClient();
@@ -1204,7 +1253,7 @@
   });
 
   /* ---------- 初始化 ---------- */
-  if (!ON_CLOUD_HOST) showWrongHostNotice();
+  if (!ON_CLOUD_HOST) enterRemoteMode();
   loadWall();
 })();
 </script>

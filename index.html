@@ -308,6 +308,15 @@
 
   /* ============ 留言反馈 ============ */
   .fb-grid{display:grid; grid-template-columns:1.12fr .88fr; gap:26px; align-items:start}
+  .fb-notice{
+    display:none; margin:0 0 26px; padding:20px 24px; border-radius:8px;
+    border:1px solid rgba(192,80,63,.42);
+    background:linear-gradient(165deg, rgba(192,80,63,.10), rgba(255,255,255,.012));
+  }
+  .fb-notice.show{display:block}
+  .fb-notice-head{font-size:14px; letter-spacing:.12em; color:#e59a88; margin-bottom:9px}
+  .fb-notice-text{margin:0 0 15px; font-size:13.5px; line-height:1.9; color:var(--muted)}
+  .fb-notice-text b{color:var(--gold-soft); font-weight:500; letter-spacing:.04em}
   .fb-card{
     border:1px solid var(--line); border-radius:8px; padding:36px 34px;
     background:linear-gradient(165deg, rgba(201,168,106,.065), rgba(255,255,255,.012));
@@ -747,6 +756,15 @@
         <p class="sec-desc">不用注册、不用登录，直接写下来就好。批评比赞美有用得多。</p>
       </div>
 
+      <div class="fb-notice" id="fbNotice">
+        <div class="fb-notice-head">这 条 地 址 收 不 到 留 言</div>
+        <p class="fb-notice-text">
+          留言存在云服务里，服务端只接受来自正式地址的提交。你现在打开的是 <b id="fbNoticeHost">当前地址</b>，
+          在这里点「送出」不会成功，也没有别的地方可以绕过。
+        </p>
+        <a class="btn btn-ghost" id="fbNoticeLink" href="#feedback">去 正 式 地 址 留 言</a>
+      </div>
+
       <div class="fb-grid">
 
         <!-- 表单 -->
@@ -968,7 +986,25 @@
   var againEl = document.getElementById("fbAgain");
   var wallList = document.getElementById("wallList");
   var wallCount = document.getElementById("wallCount");
+  var noticeEl = document.getElementById("fbNotice");
+  var noticeHostEl = document.getElementById("fbNoticeHost");
+  var noticeLinkEl = document.getElementById("fbNoticeLink");
   if (!form) return;
+
+  /* 云服务服务端对来源域名做精确匹配：只有正式地址（= CONFIG.endpoint）发起的请求会被接受。
+     换到 GitHub Pages、本地 file:// 等地址时，跨域预检会被直接拒绝，所以提前把话说清楚，
+     而不是让留言者写完一大段才收到一句含糊的「网络问题」。 */
+  var ON_CLOUD_HOST = (function(){
+    try { return location.origin === CONFIG.endpoint; } catch (e) { return false; }
+  })();
+
+  function showWrongHostNotice(){
+    var host = "";
+    try { host = location.host || location.protocol; } catch (e) { host = ""; }
+    noticeHostEl.textContent = host || "本地文件";
+    noticeLinkEl.href = CONFIG.endpoint + "#feedback";
+    noticeEl.className = "fb-notice show";
+  }
 
   var client = null;
   function getClient(){
@@ -1038,11 +1074,22 @@
     });
   }
 
+  function wallFail(){
+    wallList.innerHTML = "";
+    wallCount.textContent = "";
+    wallList.appendChild(emptyBox("留言墙暂时读不出来（网络不通，或服务暂时不可用）。稍后刷新一下试试。"));
+  }
+
   function loadWall(){
+    if (!ON_CLOUD_HOST){
+      wallList.innerHTML = "";
+      wallCount.textContent = "";
+      wallList.appendChild(emptyBox("留言墙要连上云服务才读得到。当前不是正式地址，所以这里读不出来 —— 正式地址上可以正常查看和提交。"));
+      return;
+    }
     var c = getClient();
     if (!c){
-      wallList.innerHTML = "";
-      wallList.appendChild(emptyBox("留言墙暂时读不出来（网络不通，或是本地直接打开页面时会出现）。留言提交不受影响。"));
+      wallFail();
       return;
     }
     c.database
@@ -1052,12 +1099,12 @@
       .order("created_at", { ascending: false })
       .limit(30)
       .then(function(res){
-        if (res && res.error){ renderWall(null); return; }
+        if (res && res.error){ wallFail(); return; }
         renderWall(res ? res.data : null);
       })
       .catch(function(err){
         console.warn("[feedback] wall load failed", err);
-        renderWall(null);
+        wallFail();
       });
   }
 
@@ -1090,9 +1137,14 @@
       return;
     }
 
+    if (!ON_CLOUD_HOST){
+      say("这条地址送不出去：云服务只接受来自正式地址的请求。请到 " + String(CONFIG.endpoint).replace(/^https?:\/\//, "") + " 留言，那边可以正常收到。", "err");
+      return;
+    }
+
     var c = getClient();
     if (!c){
-      say("没能送出去：页面还没连上服务器。本地直接双击打开、或网络不通时会出现这种情况，发布到线上后即可正常提交。", "err");
+      say("没能送出去：页面还没连上云服务。多半是网络不通，或云服务 SDK 没加载出来（离线打开时会出现）。稍后刷新重试。", "err");
       return;
     }
 
@@ -1145,6 +1197,7 @@
   });
 
   /* ---------- 初始化 ---------- */
+  if (!ON_CLOUD_HOST) showWrongHostNotice();
   loadWall();
 })();
 </script>
